@@ -1,4 +1,4 @@
-package in.devshivansh.jaadu
+package com.devshivansh.jaadu
 
 import android.app.Application
 import com.facebook.react.PackageList

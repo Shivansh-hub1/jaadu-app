@@ -1,4 +1,4 @@
-package in.devshivansh.jaadu
+package com.devshivansh.jaadu
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
