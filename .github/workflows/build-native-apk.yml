@@ -53,11 +53,12 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p release
-          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
-            cp android/app/build/outputs/apk/release/app-release.apk release/JAADU-native.apk
-          elif [ -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
-            cp android/app/build/outputs/apk/debug/app-debug.apk release/JAADU-native.apk
+          APK_FILE=$(find android/app/build/outputs/apk -type f -name "*.apk" | grep -i "release" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            APK_FILE=$(find android/app/build/outputs/apk -type f -name "*.apk" | head -n 1)
           fi
+          echo "Found APK: $APK_FILE"
+          cp "$APK_FILE" release/JAADU-native.apk
           echo "JAADU Native APK successfully prepared!"
           ls -lh release/JAADU-native.apk
 
