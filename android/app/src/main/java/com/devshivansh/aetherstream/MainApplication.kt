@@ -1,4 +1,4 @@
-package com.devshivansh.jaadu
+package com.devshivansh.aetherstream
 
 import android.app.Application
 import com.facebook.react.PackageList

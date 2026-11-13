@@ -13,8 +13,16 @@ export interface DownloadedLesson {
   downloadedAt: string;
 }
 
-const DOWNLOADS_KEY = '@jaadu_native_downloads';
-const DOWNLOAD_DIR = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/jaadu_downloads`;
+export function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+const DOWNLOADS_KEY = '@aether_vault_downloads';
+const DOWNLOAD_DIR = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/aether_vault`;
 
 export async function getDownloadedLessons(): Promise<DownloadedLesson[]> {
   try {
@@ -30,16 +38,51 @@ export async function getDownloadedLesson(lessonId: string): Promise<DownloadedL
   return all.find((d) => d.id === lessonId) || null;
 }
 
+/**
+ * Resolves authentic direct progressive MP4 stream URL from Wistia API
+ * instead of raw m3u8 playlist manifest.
+ */
+export async function resolveDirectMediaUrl(url: string, title?: string): Promise<string> {
+  if (!url) return '';
+  const wistiaMatch = url.match(/(?:embed\/medias\/|iframe\/|wvideo=)([a-zA-Z0-9]+)/);
+  if (wistiaMatch) {
+    const mediaId = wistiaMatch[1];
+    try {
+      const res = await fetch(`https://fast.wistia.com/embed/medias/${mediaId}.json`);
+      if (res.ok) {
+        const data = await res.json();
+        const assets: any[] = data.media?.assets || [];
+        // Prioritize 720p HD or 1080p progressive MP4
+        const chosen =
+          assets.find((a: any) => a.height === 720 && a.type !== 'original') ||
+          assets.find((a: any) => a.height === 1080 && a.type !== 'original') ||
+          assets.find((a: any) => a.url && a.url.includes('.bin')) ||
+          assets[0];
+
+        if (chosen && chosen.url) {
+          const cleanTitle = (title || 'video').replace(/[\\/:*?"<>|]/g, '_').trim();
+          return `${chosen.url.replace(/\.bin$/, '')}/${encodeURIComponent(cleanTitle)}.mp4`;
+        }
+      }
+    } catch (e) {
+      console.warn('Direct media resolution fallback:', e);
+    }
+  }
+  return url;
+}
+
 export async function downloadLesson(
   lesson: { id: string; title: string; url: string; duration?: number },
   course: { id: string; title: string },
   onProgress?: (receivedBytes: number, totalBytes: number) => void
 ): Promise<DownloadedLesson> {
-  // Ensure download folder exists
   const exists = await ReactNativeBlobUtil.fs.exists(DOWNLOAD_DIR);
   if (!exists) {
     await ReactNativeBlobUtil.fs.mkdir(DOWNLOAD_DIR);
   }
+
+  // Resolve to direct MP4 for true offline device playback
+  const directUrl = await resolveDirectMediaUrl(lesson.url, lesson.title);
 
   const safeFileName = `${lesson.id.replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4`;
   const destPath = `${DOWNLOAD_DIR}/${safeFileName}`;
@@ -47,7 +90,7 @@ export async function downloadLesson(
   const task = ReactNativeBlobUtil.config({
     path: destPath,
     overwrite: true
-  }).fetch('GET', lesson.url);
+  }).fetch('GET', directUrl);
 
   if (onProgress) {
     task.progress((received, total) => {
@@ -100,14 +143,6 @@ export async function clearAllDownloads(): Promise<void> {
     }
     await AsyncStorage.removeItem(DOWNLOADS_KEY);
   } catch (err) {
-    console.warn('Error clearing all downloads:', err);
+    console.warn('Error clearing downloads:', err);
   }
-}
-
-export function formatBytes(bytes: number): string {
-  if (!bytes || bytes <= 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }

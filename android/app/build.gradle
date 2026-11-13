@@ -77,9 +77,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.devshivansh.jaadu"
+    namespace "com.devshivansh.aetherstream"
     defaultConfig {
-        applicationId "com.devshivansh.jaadu"
+        applicationId "com.devshivansh.aetherstream"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
